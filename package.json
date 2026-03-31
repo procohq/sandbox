@@ -1,0 +1,41 @@
+{
+  "name": "@proco/sandbox",
+  "version": "0.1.0",
+  "description": "Free developer environment for building and testing AI agent payments. Testnet USDC on Base Sepolia.",
+  "scripts": {
+    "test": "npx ts-node scripts/basic-payment.ts && npx ts-node scripts/x402-flow.ts && npx ts-node scripts/policy-enforcement.ts",
+    "server": "ts-node src/mock-server.ts",
+    "basic": "ts-node scripts/basic-payment.ts",
+    "x402": "ts-node scripts/x402-flow.ts",
+    "policy": "ts-node scripts/policy-enforcement.ts"
+  },
+  "keywords": [
+    "proco",
+    "sandbox",
+    "x402",
+    "ai-agents",
+    "payments",
+    "base",
+    "usdc",
+    "testnet"
+  ],
+  "author": "Proco <hello@procohq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/procohq/sandbox.git"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "ts-node": "^10.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

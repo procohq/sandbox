@@ -1,251 +1,145 @@
-# Proco Sandbox
+<p align="center">
+  <img src="assets/banner.svg" alt="Proco Sandbox" width="100%"/>
+</p>
 
-[![Status](https://img.shields.io/badge/status-live-green)](https://procohq.com/sandbox)
-[![Network](https://img.shields.io/badge/network-Base%20Sepolia-blue)](https://sepolia.basescan.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
-Free developer environment for building and testing AI agent payments. Testnet USDC on Base Sepolia. No credit card. No real money.
-
-**[→ Start for free at procohq.com/sandbox](https://procohq.com/sandbox)**
-
----
-
-## What you can do in Sandbox
-
-- Create agent wallets with testnet USDC balances
-- Test payment policies (daily caps, vendor allowlists, per-tx limits)
-- Run x402 payments against any x402-compatible test endpoint
-- Test agent-to-agent invoice creation and settlement
-- Simulate policy violations and error handling
-- Build and iterate — without spending real money
-
-Everything in Sandbox maps 1:1 to Production. Swap `env: 'sandbox'` → `env: 'production'` and your code ships as-is.
+<p align="center">
+  <img src="https://img.shields.io/badge/network-Base%20Sepolia-0C0B09?style=flat-square" alt="Base Sepolia"/>
+  <img src="https://img.shields.io/badge/currency-testnet%20USDC-0C0B09?style=flat-square" alt="Testnet USDC"/>
+  <img src="https://img.shields.io/badge/no%20credit%20card-free-0C0B09?style=flat-square" alt="Free"/>
+  <img src="https://img.shields.io/badge/license-MIT-0C0B09?style=flat-square" alt="MIT License"/>
+  <a href="https://github.com/procohq/x402"><img src="https://img.shields.io/badge/protocol-x402-0C0B09?style=flat-square" alt="x402 protocol"/></a>
+</p>
 
 ---
 
-## Quick start
+Free developer environment for building and testing AI agent payments. Runs on Base Sepolia with testnet USDC. No credit card. No real money.
 
-**1. Get a sandbox API key**
+## What's included
+
+```
+src/mock-server.ts         x402-compatible API server (3 paid endpoints)
+scripts/basic-payment.ts   create a wallet, make a payment, check balance
+scripts/x402-flow.ts       full 402 challenge/response cycle
+scripts/policy-enforcement.ts  spending caps, allowlists, per-tx limits
+.env.example               sandbox API key + network config
+```
+
+## Quickstart
 
 ```bash
-# Go to procohq.com/sandbox — takes 2 minutes, no card required
-# You'll get: sk_sandbox_xxxx...
-```
-
-**2. Install the SDK**
-
-```bash
-npm install @proco/sdk
-```
-
-**3. Create your first agent wallet**
-
-```typescript
-import { Proco } from '@proco/sdk'
-
-const proco = new Proco({
-  apiKey: 'sk_sandbox_...',
-  env: 'sandbox'             // ← testnet mode
-})
-
-const wallet = await proco.wallets.create({
-  agentId: 'my-test-agent',
-  policies: {
-    dailyCap: 100_00,        // $100 test budget
-    currency: 'USDC'
-  }
-})
-
-console.log(wallet.id)       // → wal_test_...
-console.log(wallet.balance)  // → 1000.00 USDC (free testnet balance)
-```
-
-**4. Make a test payment**
-
-```typescript
-const tx = await proco.payments.create({
-  wallet: wallet.id,
-  amount: 1_00,              // $1.00 USDC
-  vendor: 'test.x402.dev',
-  memo: 'test payment'
-})
-
-console.log(tx.status)       // → 'settled'
-console.log(tx.settlementMs) // → 847
-console.log(tx.txHash)       // → 0xabc... (Base Sepolia)
-```
-
----
-
-## Testing x402 flows
-
-Use our public x402 test endpoints to simulate real API payment flows:
-
-```typescript
-const proco = new Proco({ apiKey: 'sk_sandbox_...', env: 'sandbox' })
-
-const wallet = await proco.wallets.create({ agentId: 'x402-tester' })
-
-// These endpoints return real 402s and accept testnet payments
-const endpoints = {
-  weather:  'https://test.x402.dev/weather',    // $0.01 USDC
-  search:   'https://test.x402.dev/search',     // $0.05 USDC
-  analysis: 'https://test.x402.dev/analyze',   // $0.50 USDC
-}
-
-const res = await proco.fetch(endpoints.weather, { wallet: wallet.id })
-const data = await res.json()
-// → { temp: 18, city: 'Dublin', paid: '$0.01 USDC' }
-```
-
----
-
-## Policy testing scenarios
-
-Test edge cases without consequences:
-
-```typescript
-// 1. Daily cap enforcement
-const cappedWallet = await proco.wallets.create({
-  agentId: 'policy-test',
-  policies: { dailyCap: 5_00, currency: 'USDC' }  // $5 cap
-})
-
-// Spend up to cap — works fine
-await proco.payments.create({ wallet: cappedWallet.id, amount: 4_50, vendor: 'test.x402.dev' })
-
-// This throws PolicyViolationError — cap exceeded
-try {
-  await proco.payments.create({ wallet: cappedWallet.id, amount: 1_00, vendor: 'test.x402.dev' })
-} catch (e) {
-  console.log(e.reason) // → 'exceeds daily cap ($5.00)'
-}
-
-// 2. Vendor allowlist
-const restrictedWallet = await proco.wallets.create({
-  agentId: 'restricted-agent',
-  policies: {
-    vendors: ['trusted-api.com'],   // only this vendor allowed
-    dailyCap: 50_00
-  }
-})
-
-// This throws — vendor not in allowlist
-try {
-  await proco.payments.create({ wallet: restrictedWallet.id, amount: 1_00, vendor: 'other-api.com' })
-} catch (e) {
-  console.log(e.reason) // → 'vendor not in allowlist'
-}
-
-// 3. Per-transaction limit
-const perTxWallet = await proco.wallets.create({
-  agentId: 'per-tx-test',
-  policies: { perTx: 2_00, dailyCap: 100_00 }  // $2 max per transaction
-})
-
-try {
-  await proco.payments.create({ wallet: perTxWallet.id, amount: 5_00, vendor: 'test.x402.dev' })
-} catch (e) {
-  console.log(e.reason) // → 'exceeds per-transaction limit ($2.00)'
-}
-```
-
----
-
-## Agent-to-agent settlement testing
-
-```typescript
-const proco = new Proco({ apiKey: 'sk_sandbox_...', env: 'sandbox' })
-
-// Orchestrator funds its own wallet
-const orchestrator = await proco.wallets.create({ agentId: 'orchestrator' })
-const worker       = await proco.wallets.create({ agentId: 'worker-01' })
-
-// Worker submits invoice to orchestrator
-const invoice = await proco.invoices.create({
-  from: worker.agentId,
-  to:   orchestrator.agentId,
-  amount: 10_00,
-  description: 'Data extraction — 50 records'
-})
-
-console.log(invoice.id)     // → inv_test_...
-console.log(invoice.status) // → 'pending'
-
-// Orchestrator settles
-const settlement = await proco.invoices.settle(invoice.id, {
-  wallet: orchestrator.id
-})
-
-console.log(settlement.status) // → 'settled'
-console.log(settlement.txHash) // → 0xabc... (Base Sepolia)
-```
-
----
-
-## Sandbox vs Production
-
-| Feature | Sandbox | Production |
-|---------|---------|------------|
-| Network | Base Sepolia (testnet) | Base mainnet |
-| USDC | Testnet USDC (worthless) | Real USDC |
-| Starting balance | 1,000 testnet USDC (free) | Your deposit |
-| API key prefix | `sk_sandbox_` | `sk_live_` |
-| API base | `sandbox.api.procohq.com` | `api.procohq.com` |
-| Rate limits | Relaxed (for testing) | Standard |
-| Settlement time | ~1s (Sepolia) | ~2s (Base mainnet) |
-| Code change to go live | `env: 'sandbox'` → `env: 'production'` | — |
-
----
-
-## Running test scripts locally
-
-```bash
-git clone https://github.com/procohq/sandbox
+git clone https://github.com/procoqq/sandbox
 cd sandbox
 npm install
 cp .env.example .env
-# Add your sandbox API key: PROCO_API_KEY=sk_sandbox_...
-
-# Run all tests
-npm test
-
-# Individual scenarios
-npx ts-node scripts/basic-payment.ts
-npx ts-node scripts/policy-enforcement.ts
-npx ts-node scripts/x402-flow.ts
-npx ts-node scripts/a2a-settlement.ts
-npx ts-node scripts/stress-test.ts
 ```
 
----
+Get a free sandbox key at [procohq.com/sandbox](https://procohq.com/sandbox) and add it to `.env`:
 
-## Resetting your sandbox
+```
+PROCO_API_KEY=sk_sandbox_...
+NETWORK=base-sepolia
+```
 
-Your sandbox balance automatically refreshes to 1,000 testnet USDC every 24 hours. You can also trigger a manual reset from [procohq.com/sandbox](https://procohq.com/sandbox).
+## The mock server
 
----
+Start a local x402-compatible API server with three priced endpoints:
 
-## Getting a production key
+```bash
+npm run server
+# Listening on http://localhost:4402
+```
 
-When you're ready to go live:
+| Endpoint | Price | Description |
+|----------|-------|-------------|
+| `GET /weather` | $0.01 | Weather data |
+| `GET /search` | $0.05 | Search results |
+| `POST /analyze` | $0.50 | AI analysis |
+| `GET /health` | free | Health check |
 
-1. Complete KYB/identity verification at procohq.com
-2. Deposit USDC to your Proco treasury
-3. Swap your API key and `env` setting
-4. Deploy
+All endpoints follow the x402 protocol — return `402 Payment Required` until a valid `X-Payment` header is supplied.
 
-Your agent wallets, policies, and all configuration carry over automatically.
+## Test scripts
 
----
+### Basic payment flow
+
+Creates an agent wallet, makes a payment, and checks the updated balance.
+
+```bash
+npm run basic
+```
+
+```
+✓ Wallet created: wallet_abc123  (balance: 10.00 USDC)
+✓ Payment sent: $1.00 USDC → api.example.com
+✓ Balance updated: 9.00 USDC
+```
+
+### Full x402 flow
+
+Demonstrates the complete 402 challenge/response cycle — request → 402 → sign → retry → 200.
+
+```bash
+npm run x402
+```
+
+```
+→ GET /weather
+← 402  { amount: 0.01, currency: "USDC", network: "base-sepolia" }
+→ POST /v1/payments/sign  (asking Proco to sign payment)
+← signed payment proof
+→ GET /weather  (X-Payment: <proof>)
+← 200  { temp: 22, condition: "clear" }
+✓ Payment settled: 0.01 USDC
+```
+
+### Policy enforcement
+
+Tests that spending controls are enforced before any transaction reaches the chain.
+
+```bash
+npm run policy
+```
+
+```
+✓ Daily cap enforced      → PolicyViolationError: daily limit exceeded
+✓ Vendor allowlist works  → PolicyViolationError: vendor not in allowlist
+✓ Per-tx limit works      → PolicyViolationError: amount exceeds per-tx limit
+```
+
+## How it works
+
+The sandbox uses real x402 infrastructure on Base Sepolia — the same protocol as production, with testnet funds. Your agent wallet is created via the Proco API, funded automatically with testnet USDC, and can transact immediately.
+
+```
+Agent  →  GET /weather
+Server  ←  402 + PaymentRequired { amount: $0.01, network: "base-sepolia" }
+Agent  →  Proco  POST /v1/payments/sign
+Proco  →  Agent  signed X-Payment proof
+Agent  →  GET /weather + X-Payment: <proof>
+Server  ←  200 + weather data
+```
+
+No wallets to create. No faucets to drain. No gas to manage.
+
+## Moving to production
+
+When you're ready to go live, swap your sandbox key for a production key at [procohq.com](https://procohq.com). Same API, same code, real USDC on Base mainnet.
+
+```diff
+- PROCO_API_KEY=sk_sandbox_...
++ PROCO_API_KEY=sk_live_...
+- NETWORK=base-sepolia
++ NETWORK=base
+```
 
 ## Related
 
-- [`@proco/sdk`](https://github.com/procohq/proco-sdk) — full SDK
-- [`procohq/x402`](https://github.com/procohq/x402) — x402 facilitator
-- [`procohq/examples`](https://github.com/procohq/examples) — code examples
-- [x402 standard](https://github.com/coinbase/x402) — the underlying protocol
+- [`procohq/x402`](https://github.com/procohq/x402) — Proco's x402 facilitator (middleware + client)
+- [`coinbase/x402`](https://github.com/coinbase/x402) — the x402 open standard
+- [procohq.com](https://procohq.com) — production API + wallet dashboard
 
 ---
 
-MIT · Built by [Proco](https://procohq.com)
+<p align="center">
+  <a href="https://procohq.com">procohq.com</a> · MIT · Built by Proco
+</p>

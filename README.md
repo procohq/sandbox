@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="Proco Sandbox" width="100%"/>
+  <img src="assets/banner.svg" alt="Proco lab" width="100%"/>
 </p>
 
 <p align="center">
@@ -27,8 +27,8 @@ scripts/policy-enforcement.ts  spending caps, allowlists, per-tx limits
 ## Quickstart
 
 ```bash
-git clone https://github.com/procoqq/sandbox
-cd sandbox
+git clone https://github.com/procohq/lab
+cd lab
 npm install
 cp .env.example .env
 ```
@@ -134,7 +134,7 @@ When you're ready to go live, swap your sandbox key for a production key at [pro
 
 ## Related
 
-- [`procohq/x402`](https://github.com/procohq/x402) — Proco's x402 facilitator (middleware + client)
+- [`procohq/pay`](https://github.com/procohq/pay) — Proco pay: payment infrastructure, wallets, and policy enforcement
 - [`coinbase/x402`](https://github.com/coinbase/x402) — the x402 open standard
 - [procohq.com](https://procohq.com) — production API + wallet dashboard
 
